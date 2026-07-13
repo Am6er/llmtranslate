@@ -1,0 +1,14 @@
+{
+  "BaseUrl": "http://127.0.0.1:8080",
+  "Model": "",
+  "SourceLang": "English",
+  "TargetLang": "Russian",
+  "Temperature": 0.3,
+  "MaxCharsPerChunk": 1800,
+  "MaxTokens": 4096,
+  "RequestTimeoutSec": 180,
+  "OutputSuffix": "_RU",
+  "RetryCount": 4,
+  "TargetTempC": 75,
+  "NvidiaSmiPath": "nvidia-smi"
+}

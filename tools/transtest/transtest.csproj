@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>LlmTranslate</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\app\Translator.cs" />
+    <Compile Include="..\..\app\OpenAiClient.cs" />
+    <Compile Include="..\..\app\AppConfig.cs" />
+    <Compile Include="..\..\app\GpuMonitor.cs" />
+  </ItemGroup>
+</Project>

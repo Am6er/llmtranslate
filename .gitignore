@@ -1,0 +1,28 @@
+# ---- .NET / build outputs ----
+bin/
+obj/
+publish/
+artifacts/
+[Dd]ebug/
+[Rr]elease/
+*.dll
+*.pdb
+*.exe
+
+# ---- Visual Studio / Rider / VS Code ----
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*_wpftmp.csproj
+
+# ---- app runtime data ----
+# translation checkpoints are created next to source docs, never commit them
+*.progress/
+
+# ---- OS junk ----
+Thumbs.db
+Desktop.ini
+.DS_Store
