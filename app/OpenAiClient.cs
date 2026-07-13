@@ -44,6 +44,29 @@ public sealed class OpenAiClient : IDisposable
         }
     }
 
+    /// <summary>Server context window (n_ctx) from llama.cpp /props, or null if unavailable.
+    /// This is the hard ceiling for prompt+generation, i.e. the max usable output tokens.</summary>
+    public async Task<int?> GetServerMaxContextAsync()
+    {
+        try
+        {
+            using var resp = await _probe.GetAsync($"{_cfg.BaseUrl.TrimEnd('/')}/props");
+            if (!resp.IsSuccessStatusCode) return null;
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            if (root.TryGetProperty("default_generation_settings", out var dgs) &&
+                dgs.TryGetProperty("n_ctx", out var n1) && n1.TryGetInt32(out int v1))
+                return v1;
+            if (root.TryGetProperty("n_ctx", out var n2) && n2.TryGetInt32(out int v2))
+                return v2;
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task<string> ChatAsync(string system, string user, int maxTokens, CancellationToken ct)
     {
         var model = string.IsNullOrWhiteSpace(_cfg.Model) ? (await GetModelAsync() ?? "local") : _cfg.Model;

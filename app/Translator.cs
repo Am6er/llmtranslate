@@ -28,6 +28,7 @@ public sealed class Translator
     private readonly OpenAiClient _client;
     private readonly Action<string> _log;
     private readonly GpuMonitor _gpu;
+    private int _maxTokens;   // effective per-chunk output cap (config, clamped to server n_ctx)
 
     public Translator(AppConfig cfg, OpenAiClient client, Action<string> log)
     {
@@ -58,6 +59,15 @@ public sealed class Translator
         string masked = Protect(text, store);
         var chunks = SplitIntoChunks(masked, _cfg.MaxCharsPerChunk);
         _log($"Защищено фрагментов (формулы/код): {store.Count}; чанков: {chunks.Count}");
+
+        // per-chunk output cap from config, clamped to the server's context window (n_ctx)
+        _maxTokens = _cfg.MaxTokens;
+        int? nctx = await _client.GetServerMaxContextAsync();
+        if (nctx.HasValue && _maxTokens > nctx.Value)
+        {
+            _log($"MaxTokens {_cfg.MaxTokens} превышает лимит сервера (n_ctx={nctx.Value}) — занижаю до {nctx.Value}.");
+            _maxTokens = nctx.Value;
+        }
 
         // ---- checkpoint setup ----
         string hash = Sha256(text);
@@ -129,7 +139,7 @@ public sealed class Translator
         {
             try
             {
-                string raw = await _client.ChatAsync(BuildSystemPrompt(), chunk, _cfg.MaxTokens, ct);
+                string raw = await _client.ChatAsync(BuildSystemPrompt(), chunk, _maxTokens, ct);
                 return StripThink(raw).Trim();
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
