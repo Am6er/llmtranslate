@@ -17,7 +17,10 @@ public sealed class OpenAiClient : IDisposable
     public OpenAiClient(AppConfig cfg)
     {
         _cfg = cfg;
-        _chat = new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(30, cfg.RequestTimeoutSec)) };
+        // No wall-clock timeout: the thermal throttle may SUSPEND the server mid-request while it
+        // cools, which must not trip a spurious timeout. Real connection drops still throw
+        // (→ retry), and the user can Cancel. (RequestTimeoutSec kept for compatibility, unused here.)
+        _chat = new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
     }
 
     /// <summary>Returns the served model id, or null if the endpoint is not reachable.</summary>

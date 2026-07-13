@@ -12,5 +12,6 @@
     <Compile Include="..\..\app\OpenAiClient.cs" />
     <Compile Include="..\..\app\AppConfig.cs" />
     <Compile Include="..\..\app\GpuMonitor.cs" />
+    <Compile Include="..\..\app\GpuThrottle.cs" />
   </ItemGroup>
 </Project>

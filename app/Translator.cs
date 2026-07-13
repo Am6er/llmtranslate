@@ -77,6 +77,13 @@ public sealed class Translator
         int reused = 0;
         var outParts = new string[chunks.Count];
 
+        // Background thermal throttle: holds temperature by suspending/resuming the GPU compute
+        // process (llama-server) purely by temperature — no per-chunk time deadline.
+        // targetTempC() is read live, so the slider applies mid-run.
+        var throttle = new GpuThrottle(_gpu, targetTempC, _log);
+        throttle.Start();
+        try
+        {
         for (int i = 0; i < chunks.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
@@ -99,15 +106,15 @@ public sealed class Translator
 
             progress.Report((double)(i + 1) / chunks.Count);
 
-            // read + report GPU temperature every chunk; cool down if above target.
-            // targetTempC() is read fresh, so moving the slider mid-run takes effect.
+            // informational: log GPU temperature each chunk (the actual holding is done by the
+            // background GpuThrottle, which suspends the server process while it is too hot).
             int? temp = await _gpu.ReadTempAsync(ct);
             _log(temp.HasValue
                 ? $"   температура GPU: {temp}°C (цель ≤ {targetTempC()}°C)"
                 : "   температура GPU: н/д (nvidia-smi недоступен)");
-            if (i < chunks.Count - 1 && temp.HasValue)
-                await CooldownAsync(temp.Value, targetTempC, ct);
         }
+        }
+        finally { throttle.Stop(); }
 
         if (reused > 0) _log($"Из чекпоинта переиспользовано чанков: {reused}");
 
@@ -117,19 +124,6 @@ public sealed class Translator
             _log($"⚠ {missing} защищённых фрагментов не вернулись (модель потеряла плейсхолдер).");
 
         return restored.TrimEnd() + "\n";
-    }
-
-    private async Task CooldownAsync(int currentTemp, Func<int> targetTempC, CancellationToken ct)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(120); // safety cap — never hang too long on one chunk
-        while (currentTemp > targetTempC() && DateTime.UtcNow < deadline)
-        {
-            _log($"   остываю: {currentTemp}°C > целевых {targetTempC()}°C — пауза 3 c");
-            await Task.Delay(3000, ct);
-            int? t = await _gpu.ReadTempAsync(ct);
-            if (!t.HasValue) return; // lost the sensor — don't block
-            currentTemp = t.Value;
-        }
     }
 
     private async Task<string> TranslateChunkWithRetryAsync(string chunk, int idx, CancellationToken ct)
